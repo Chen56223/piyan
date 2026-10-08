@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RETRO BATTER SHOWDOWN - 復古街機棒球模擬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px;
+    }
+    .cabinet {
+      width: 100%;
+      max-width: 680px;
+      background: #181d28;
+      border: 4px solid #3b4252;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 0 30px rgba(0, 255, 170, 0.15), inset 0 0 15px rgba(0,0,0,0.8);
+      position: relative;
+    }
+    .cabinet::after {
+      content: " ";
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f141c;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 2px solid #2e3440;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .led-green { color: #50fa7b; text-shadow: 0 0 8px #50fa7b; }
+    .led-red { color: #ff5555; text-shadow: 0 0 8px #ff5555; }
+    .led-yellow { color: #f1fa8c; text-shadow: 0 0 8px #f1fa8c; }
+    .canvas-container {
+      position: relative;
+      background: #050811;
+      border: 2px solid #434c5e;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    canvas { display: block; width: 100%; height: auto; }
+    .char-select {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .char-btn {
+      flex: 1;
+      padding: 8px 4px;
+      background: #2e3440;
+      border: 2px solid #4c566a;
+      color: #d8dee9;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .char-btn.active {
+      background: #d08770;
+      border-color: #ebcb8b;
+      color: #0b0f19;
+      box-shadow: 0 0 10px #d08770;
+    }
+    .battle-log {
+      background: #000;
+      border: 1px solid #3b4252;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 12px;
+      color: #a3be8c;
+      min-height: 48px;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .control-deck {
+      display: grid;
+      grid-template-columns: 1fr 100px 1fr;
+      gap: 10px;
+      background: #111520;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #2e3440;
+    }
+    .deck-section { display: flex; flex-direction: column; gap: 6px; }
+    .deck-title { font-size: 11px; color: #88c0d0; text-transform: uppercase; font-weight: bold; }
+    .choice-group { display: flex; flex-direction: column; gap: 4px; }
+    .choice-btn {
+      padding: 6px;
+      background: #2e3440;
+      border: 1px solid #4c566a;
+      color: #e5e9f0;
+      font-size: 11px;
+      cursor: pointer;
+      border-radius: 4px;
+      text-align: left;
+    }
+    .choice-btn.selected {
+      background: #88c0d0;
+      color: #000;
+      font-weight: bold;
+      border-color: #81a1c1;
+    }
+    .grid-9 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      width: 90px;
+      height: 90px;
+      margin: auto;
+    }
+    .grid-cell {
+      background: #2e3440;
+      border: 1px solid #434c5e;
+      color: #d8dee9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .grid-cell.selected {
+      background: #bf616a;
+      color: #fff;
+      font-weight: bold;
+      border-color: #ebcb8b;
+    }
+    .swing-btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      background: #a3be8c;
+      border: 2px solid #8fbcbb;
+      color: #0b0f19;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 6px;
+      text-align: center;
+      text-transform: uppercase;
+      box-shadow: 0 4px 0 #4c566a;
+    }
+    .swing-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #4c566a;
+    }
+    .swing-btn:disabled {
+      background: #4c566a;
+      color: #999;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .modal-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      border-radius: 8px;
+    }
+    .modal-content {
+      text-align: center;
+      border: 3px solid #ff5555;
+      background: #181d28;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    .modal-title { font-size: 22px; color: #ff5555; margin-bottom: 12px; font-weight: bold; }
+    .modal-stats { font-size: 13px; line-height: 1.8; margin-bottom: 16px; color: #eceff4; }
+    .restart-btn {
+      padding: 8px 16px;
+      background: #50fa7b;
+      border: none;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="cabinet">
+  <div class="header-bar">
+    <div>
+      OUT: <span id="outLed" class="led-red">○○○</span>
+      B: <span id="ballLed" class="led-green">○○○○</span>
+      S: <span id="strikeLed" class="led-yellow">○○</span>
+    </div>
+    <div>
+      SCORE: <span id="scoreVal" class="led-yellow">0</span> |
+      HITS: <span id="hitsVal" class="led-green">0</span> |
+      HR: <span id="hrVal" class="led-red">0</span>
+    </div>
+  </div>
+
+  <div class="char-select">
+    <button class="char-btn active" onclick="setBatter(0)">重砲巨砲 (SLUGGER)</button>
+    <button class="char-btn" onclick="setBatter(1)">選球核彈頭 (CONTACT)</button>
+    <button class="char-btn" onclick="setBatter(2)">五拍平衡手 (BALANCED)</button>
+  </div>
+
+  <div class="canvas-container">
+    <canvas id="stage" width="600" height="340"></canvas>
+  </div>
+
+  <div class="battle-log" id="battleLog">
+    [街機待命] 選擇你的打者特質，鎖定預測球種、九宮格落點與出棒模式，點擊下方按鈕出棒！
+  </div>
+
+  <div class="control-deck">
+    <div class="deck-section">
+      <div class="deck-title">1. 預測球種</div>
+      <div class="choice-group">
+        <button class="choice-btn selected" onclick="pickPitch(0)">四縫線速球</button>
+        <button class="choice-btn" onclick="pickPitch(1)">橫向滑球</button>
+        <button class="choice-btn" onclick="pickPitch(2)">垂直大曲球</button>
+        <button class="choice-btn" onclick="pickPitch(3)">指叉快速下墜</button>
+      </div>
+    </div>
+
+    <div class="deck-section" style="align-items:center;">
+      <div class="deck-title">2. 九宮格落點</div>
+      <div class="grid-9">
+        <div class="grid-cell" onclick="pickZone(1)">1</div>
+        <div class="grid-cell" onclick="pickZone(2)">2</div>
+        <div class="grid-cell" onclick="pickZone(3)">3</div>
+        <div class="grid-cell" onclick="pickZone(4)">4</div>
+        <div class="grid-cell selected" onclick="pickZone(5)">5</div>
+        <div class="grid-cell" onclick="pickZone(6)">6</div>
+        <div class="grid-cell" onclick="pickZone(7)">7</div>
+        <div class="grid-cell" onclick="pickZone(8)">8</div>
+        <div class="grid-cell" onclick="pickZone(9)">9</div>
+      </div>
+    </div>
+
+    <div class="deck-section">
+      <div class="deck-title">3. 出棒策略</div>
+      <div class="choice-group">
+        <button class="choice-btn selected" onclick="pickSwing(0)">強力揮擊 (Power)</button>
+        <button class="choice-btn" onclick="pickSwing(1)">確實擊球 (Contact)</button>
+        <button class="choice-btn" onclick="pickSwing(2)">等待看球 (Take)</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="swing-btn" id="actionBtn" onclick="executePitch()">鎖定並出球 (PITCH & RESOLVE)</button>
+
+  <div id="gameOverModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-title">GAME OVER</div>
+      <div class="modal-stats" id="finalStats"></div>
+      <button class="restart-btn" onclick="resetGame()">重新挑戰 3-OUT</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- 音效合成器 (Web Audio API) ---
+class SoundSynth {
+  constructor() {
+    this.ctx = null;
+  }
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+  playWhoosh() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.25);
+    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.25);
+  }
+  playHit() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(850, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(220, this.ctx.currentTime + 0.35);
+    gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.35);
+  }
+  playCatch() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(140, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.15);
+  }
+  playFanfare() {
+    this.init();
+    const notes = [261.63, 329.63, 392.00, 523.25];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
+      gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.08);
+      gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.08 + 0.25);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(this.ctx.currentTime + idx * 0.08);
+      osc.stop(this.ctx.currentTime + idx * 0.08 + 0.25);
+    });
+  }
+}
+const sound = new SoundSynth();
+
+// --- 遊戲狀態 ---
+const BATTER_PROFILES = [
+  { name: '重砲巨砲', power: 1.4, contact: 0.75, eye: 0.8 },
+  { name: '選球核彈頭', power: 0.6, contact: 1.35, eye: 1.4 },
+  { name: '五拍平衡手', power: 1.0, contact: 1.05, eye: 1.0 }
+];
+
+const PITCH_NAMES = ['四縫線速球', '橫向滑球', '垂直大曲球', '指叉下墜球'];
+const SWING_NAMES = ['強力揮擊', '確實擊球', '等待看球'];
+
+let selectedBatterIdx = 0;
+let userGuessPitch = 0;
+let userGuessZone = 5;
+let userSwingMode = 0;
+
+let state = {
+  outs: 0,
+  balls: 0,
+  strikes: 0,
+  score: 0,
+  hits: 0,
+  hrs: 0,
+  atBats: 0,
+  bases: [0, 0, 0],
+  isBusy: false
+};
+
+// --- Canvas 繪圖渲染 ---
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+
+let animBall = null;
+let bannerText = "";
+
+function drawField() {
+  ctx.fillStyle = "#0c1524";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 外野草皮
+  ctx.fillStyle = "#1e3a1e";
+  ctx.fillRect
